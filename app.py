@@ -143,19 +143,8 @@ elif menu == "⚙️ 상품 마스터 관리":
                 st.session_state.inventory = pd.concat([st.session_state.inventory, new_inv], ignore_index=True)
         st.success("마스터 정보가 반영되었습니다.")
 
-import streamlit as st
-import pandas as pd
-from datetime import datetime
-
-# (기존 데이터 초기화 로직은 유지하되, transaction_log가 모든 데이터를 담고 있음)
-
-# 3. 사이드바 메뉴 확장
-st.sidebar.title("🏢 SCM 관리 센터")
-menu = st.sidebar.radio("메뉴 선택", 
-    ["📊 재고 현황", "🛒 구매발주 및 입고", "🚚 출고요청 및 출고", "📋 통합 이력 조회", "⚙️ 상품 마스터 관리"])
-
 # --- [추가된 메뉴] 통합 이력 조회 ---
-if menu == "📋 통합 이력 조회":
+elif menu == "📋 통합 이력 조회":
     st.title("📋 전체 거래 및 문서 이력")
     st.caption("시스템에서 발생한 모든 전표 내역을 유형별로 확인합니다.")
 
