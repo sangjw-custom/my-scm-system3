@@ -8,12 +8,14 @@ st.set_page_config(page_title="통합 SCM 관리 시스템", layout="wide")
 # 2. 데이터 초기화 (세션 상태)
 if 'master_data' not in st.session_state:
     st.session_state.master_data = pd.DataFrame([
-
+        {"상품코드": "G-001", "상품명": "강화유리 5T", "단위": "EA", "매입단가": 20000, "판매단가": 35000},
+        {"상품코드": "I-001", "상품명": "알루미늄 프레임", "단위": "m", "매입단가": 8000, "판매단가": 15000}
     ])
 
 if 'inventory' not in st.session_state:
     st.session_state.inventory = pd.DataFrame([
-
+        {"상품코드": "G-001", "현재고": 0},
+        {"상품코드": "I-001", "현재고": 0}
     ])
 
 if 'transaction_log' not in st.session_state:
