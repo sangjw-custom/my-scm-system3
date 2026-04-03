@@ -142,3 +142,68 @@ elif menu == "⚙️ 상품 마스터 관리":
                 new_inv = pd.DataFrame([{"상품코드": code, "현재고": 0}])
                 st.session_state.inventory = pd.concat([st.session_state.inventory, new_inv], ignore_index=True)
         st.success("마스터 정보가 반영되었습니다.")
+
+import streamlit as st
+import pandas as pd
+from datetime import datetime
+
+# (기존 데이터 초기화 로직은 유지하되, transaction_log가 모든 데이터를 담고 있음)
+
+# 3. 사이드바 메뉴 확장
+st.sidebar.title("🏢 SCM 관리 센터")
+menu = st.sidebar.radio("메뉴 선택", 
+    ["📊 재고 현황", "🛒 구매발주 및 입고", "🚚 출고요청 및 출고", "📋 통합 이력 조회", "⚙️ 상품 마스터 관리"])
+
+# --- [추가된 메뉴] 통합 이력 조회 ---
+if menu == "📋 통합 이력 조회":
+    st.title("📋 전체 거래 및 문서 이력")
+    st.caption("시스템에서 발생한 모든 전표 내역을 유형별로 확인합니다.")
+
+    # 탭을 사용하여 화면 분할
+    tab1, tab2, tab3, tab4 = st.tabs(["🛒 구매발주 내역", "📥 입고 내역", "📝 출고 요청", "📤 출고 완료"])
+
+    with tab1:
+        st.subheader("1. 구매발주(PO) 리스트")
+        po_data = st.session_state.transaction_log[st.session_state.transaction_log["유형"] == "구매발주"]
+        if not po_data.empty:
+            st.dataframe(po_data, use_container_width=True)
+        else:
+            st.info("등록된 구매발주 내역이 없습니다.")
+
+    with tab2:
+        st.subheader("2. 최종 입고(Inbound) 내역")
+        in_data = st.session_state.transaction_log[st.session_state.transaction_log["유형"] == "입고"]
+        if not in_data.empty:
+            st.dataframe(in_data, use_container_width=True)
+        else:
+            st.info("처리된 입고 내역이 없습니다.")
+
+    with tab3:
+        st.subheader("3. 현장 출고 요청(REQ) 리스트")
+        req_data = st.session_state.transaction_log[st.session_state.transaction_log["유형"] == "출고요청"]
+        if not req_data.empty:
+            st.dataframe(req_data, use_container_width=True)
+        else:
+            st.info("대기 중인 출고 요청이 없습니다.")
+
+    with tab4:
+        st.subheader("4. 최종 출고(Outbound) 내역")
+        out_data = st.session_state.transaction_log[st.session_state.transaction_log["유형"] == "출고"]
+        if not out_data.empty:
+            st.dataframe(out_data, use_container_width=True)
+        else:
+            st.info("완료된 출고 내역이 없습니다.")
+
+    # 하단: 전체 로그 통합 검색 및 엑셀 다운로드 기능 예시
+    st.divider()
+    st.subheader("🔍 전체 로그 통합 검색")
+    search_term = st.text_input("문서번호 또는 입력자 검색", "")
+    if search_term:
+        filtered_df = st.session_state.transaction_log[
+            st.session_state.transaction_log.apply(lambda row: search_term in str(row.values), axis=1)
+        ]
+        st.dataframe(filtered_df, use_container_width=True)
+    else:
+        st.write("모든 트랜잭션 수:", len(st.session_state.transaction_log))
+
+# (나머지 재고 현황, 구매/입고, 출고/처리, 마스터 관리 코드는 이전 답변과 동일하게 유지)
