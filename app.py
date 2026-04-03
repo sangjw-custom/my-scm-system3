@@ -2,80 +2,87 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# 1. 페이지 설정 및 스타일
-st.set_page_config(page_title="클라우드 통합 발주 시스템", layout="wide")
+# 1. 페이지 설정
+st.set_page_config(page_title="유리/인테리어 자재 통합 관리", layout="wide")
 
-# 2. 데이터 초기화 (실제 운영 시에는 구글 시트나 DB 연결 권장)
-if 'inventory' not in st.session_state:
-    st.session_state.inventory = pd.DataFrame([
-        {"품목코드": "G-001", "품목명": "강화유리 A형", "현재고": 50, "단가": 15000},
-        {"품목코드": "F-002", "품목명": "알루미늄 프레임", "현재고": 120, "단가": 8000},
-        {"품목코드": "P-003", "품목명": "고무 패킹", "현재고": 300, "단가": 2500}
+# 2. 마스터 데이터 및 상태 초기화
+if 'master_data' not in st.session_state:
+    # 상품 마스터 (수정 불가능한 기본 정보)
+    st.session_state.master_data = pd.DataFrame([
+        {"상품코드": "G-001", "상품명": "강화유리 5T", "규격": "1200*2400", "단가": 25000},
+        {"상품코드": "G-002", "상품명": "복층유리 16T", "규격": "1000*1500", "단가": 45000},
+        {"상품코드": "I-001", "상품명": "알루미늄 샷시", "규격": "블랙/3m", "단가": 12000}
     ])
 
-if 'order_history' not in st.session_state:
-    st.session_state.order_history = pd.DataFrame(columns=["일자", "품목명", "수량", "총액", "담당자"])
+if 'inventory' not in st.session_state:
+    # 실시간 재고 데이터 (마스터 기반)
+    st.session_state.inventory = pd.DataFrame([
+        {"상품코드": "G-001", "현재고": 100, "안전재고": 20},
+        {"상품코드": "G-002", "현재고": 50, "안전재고": 10},
+        {"상품코드": "I-001", "현재고": 200, "안전재고": 30}
+    ])
+
+if 'outbound_requests' not in st.session_state:
+    # 출고 요청 이력
+    st.session_state.outbound_requests = pd.DataFrame(columns=["요청일시", "상품코드", "상품명", "요청수량", "담당자", "상태"])
 
 # 3. 사이드바 메뉴
-menu = st.sidebar.selectbox("메뉴 선택", ["재고 현황", "신규 발주 등록", "발주 이력"])
+menu = st.sidebar.radio("업무 선택", ["📦 재고 및 마스터 조회", "📝 출고 요청 등록", "🚚 출고 처리(승인)"])
 
-# --- 메뉴 1: 재고 현황 ---
-if menu == "재고 현황":
-    st.title("📦 실시간 재고 대시보드")
+# --- 메뉴 1: 재고 및 마스터 조회 ---
+if menu == "📦 재고 및 마스터 조회":
+    st.title("📊 통합 재고 현황")
+    # 마스터와 재고 합치기 (Join)
+    display_df = pd.merge(st.session_state.master_data, st.session_state.inventory, on="상품코드")
+    st.dataframe(display_df, use_container_width=True)
+
+# --- 메뉴 2: 출고 요청 등록 ---
+elif menu == "📝 출고 요청 등록":
+    st.title("📝 현장 출고 요청")
+    with st.form("request_form"):
+        # 마스터 데이터에서 상품 선택
+        selected_item_name = st.selectbox("출고 품목", st.session_state.master_data["상품명"])
+        item_info = st.session_state.master_data[st.session_state.master_data["상품명"] == selected_item_name].iloc[0]
+        
+        req_qty = st.number_input("요청 수량", min_value=1)
+        requester = st.text_input("요청자(현장담당)")
+        
+        if st.form_submit_button("출고 요청 전송"):
+            new_req = {
+                "요청일시": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "상품코드": item_info["상품코드"],
+                "상품명": item_info["상품명"],
+                "요청수량": req_qty,
+                "담당자": requester,
+                "상태": "대기"
+            }
+            st.session_state.outbound_requests = pd.concat([st.session_state.outbound_requests, pd.DataFrame([new_req])], ignore_index=True)
+            st.success(f"[{item_info['상품명']}] 출고 요청이 접수되었습니다.")
+
+# --- 메뉴 3: 출고 처리(승인) ---
+elif menu == "🚚 출고 처리(승인)":
+    st.title("🚚 출고 승인 및 재고 반영")
+    pending_reqs = st.session_state.outbound_requests[st.session_state.outbound_requests["상태"] == "대기"]
     
-    # 상단 요약 지표
-    col1, col2, col3 = st.columns(3)
-    col1.metric("전체 품목", len(st.session_state.inventory))
-    col2.metric("재고 총액", f"{sum(st.session_state.inventory['현재고'] * st.session_state.inventory['단가']):,}원")
-    col3.metric("금일 발주건", len(st.session_state.order_history))
-
-    st.subheader("상세 재고 리스트")
-    st.dataframe(st.session_state.inventory, use_container_width=True)
-
-# --- 메뉴 2: 신규 발주 등록 ---
-elif menu == "신규 발주 등록":
-    st.title("📝 신규 발주 입력")
-    
-    with st.form("order_form", clear_on_submit=True):
-        col_a, col_b = st.columns(2)
-        with col_a:
-            item_name = st.selectbox("품목 선택", st.session_state.inventory["품목명"])
-            manager = st.text_input("담당자 성함")
-        with col_b:
-            order_qty = st.number_input("발주 수량", min_value=1, step=1)
-            
-        # 선택한 품목의 단가 가져오기
-        unit_price = st.session_state.inventory.loc[st.session_state.inventory["품목명"] == item_name, "단가"].values[0]
-        total_price = unit_price * order_qty
-        
-        st.info(f"선택 품목 단가: {unit_price:,}원 | **예상 총액: {total_price:,}원**")
-        
-        submit = st.form_submit_button("발주 확정 및 재고 반영")
-        
-        if submit:
-            if manager:
-                # 재고 수량 업데이트 (입고 처리)
-                idx = st.session_state.inventory[st.session_state.inventory["품목명"] == item_name].index
-                st.session_state.inventory.at[idx[0], "현재고"] += order_qty
-                
-                # 발주 이력 추가
-                new_order = {
-                    "일자": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    "품목명": item_name,
-                    "수량": order_qty,
-                    "총액": f"{total_price:,}원",
-                    "담당자": manager
-                }
-                st.session_state.order_history = pd.concat([st.session_state.order_history, pd.DataFrame([new_order])], ignore_index=True)
-                
-                st.success(f"✅ {item_name} {order_qty}개 발주 완료! 재고에 반영되었습니다.")
-            else:
-                st.error("담당자 성함을 입력해주세요.")
-
-# --- 메뉴 3: 발주 이력 ---
-elif menu == "발주 이력":
-    st.title("📜 전체 발주 기록")
-    if len(st.session_state.order_history) > 0:
-        st.table(st.session_state.order_history)
+    if len(pending_reqs) == 0:
+        st.info("현재 대기 중인 출고 요청이 없습니다.")
     else:
-        st.write("아직 발생한 발주 내역이 없습니다.")
+        for i, row in pending_reqs.iterrows():
+            with st.expander(f"요청번호 {i} : {row['상품명']} ({row['요청수량']}개)"):
+                st.write(f"요청자: {row['담당자']} | 요청시간: {row['요청일시']}")
+                
+                # 재고 확인
+                current_stock = st.session_state.inventory.loc[st.session_state.inventory["상품코드"] == row["상품코드"], "현재고"].values[0]
+                st.write(f"현재 창고 재고: **{current_stock}**개")
+                
+                if current_stock >= row["요청수량"]:
+                    if st.button(f"출고 승인 (ID:{i})"):
+                        # 1. 재고 차감
+                        idx = st.session_state.inventory[st.session_state.inventory["상품코드"] == row["상품코드"]].index
+                        st.session_state.inventory.at[idx[0], "현재고"] -= row["요청수량"]
+                        # 2. 상태 변경
+                        st.session_state.outbound_requests.at[i, "상태"] = "출고완료"
+                        st.success("재고가 차감되고 출고가 완료되었습니다.")
+                        st.rerun()
+                else:
+                    st.error("재고가 부족하여 출고할 수 없습니다.")
