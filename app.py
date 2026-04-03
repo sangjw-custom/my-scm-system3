@@ -1,78 +1,16 @@
 import streamlit as st
 import pandas as pd
+from datetime import datetime
 
 # 1. 페이지 설정
-st.set_page_config(page_title="공급망 관리 시스템 - 마스터 관리", layout="wide")
+st.set_page_config(page_title="통합 SCM 관리 시스템", layout="wide")
 
-# 2. 데이터 보관소 초기화 (세션 상태)
-# 실제 운영 시에는 여기서 Google Sheets나 DB를 로드하게 됩니다.
+# 2. 데이터 초기화 (세션 상태)
 if 'master_data' not in st.session_state:
-    # 초기 샘플 데이터
     st.session_state.master_data = pd.DataFrame([
         {"상품코드": "G-001", "상품명": "강화유리 5T", "단위": "EA", "매입단가": 20000, "판매단가": 35000},
         {"상품코드": "I-001", "상품명": "알루미늄 프레임", "단위": "m", "매입단가": 8000, "판매단가": 15000}
     ])
-
-# 3. 사이드바 메뉴
-st.sidebar.title("⚙️ 관리자 메뉴")
-menu = st.sidebar.radio("이동", ["📦 상품 마스터 관리", "📊 재고 현황(준비중)"])
-
-# --- [메뉴] 상품 마스터 관리 ---
-if menu == "📦 상품 마스터 관리":
-    st.title("📦 상품 마스터 관리")
-    st.caption("시스템에서 사용하는 모든 상품 정보를 등록하고 관리합니다.")
-
-    # 상단: 신규 상품 등록 섹션
-    with st.expander("➕ 신규 상품 등록", expanded=False):
-        with st.form("new_item_form", clear_on_submit=True):
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                new_code = st.text_input("상품코드 (중복불가)", placeholder="예: G-002")
-                new_name = st.text_input("상품명", placeholder="예: 복층유리 16T")
-            with col2:
-                new_unit = st.selectbox("단위", ["EA", "m", "box", "set", "kg"])
-            with col3:
-                new_in_price = st.number_input("매입단가", min_value=0, step=100)
-                new_out_price = st.number_input("판매단가", min_value=0, step=100)
-            
-            submit_button = st.form_submit_button("상품 저장")
-            
-            if submit_button:
-                if new_code and new_name:
-                    # 코드 중복 체크
-                    if new_code in st.session_state.master_data["상품코드"].values:
-                        st.error("이미 존재하는 상품코드입니다.")
-                    else:
-                        new_row = {
-                            "상품코드": new_code, "상품명": new_name, "단위": new_unit,
-                            "매입단가": new_in_price, "판매단가": new_out_price
-                        }
-                        st.session_state.master_data = pd.concat([st.session_state.master_data, pd.DataFrame([new_row])], ignore_index=True)
-                        st.success(f"'{new_name}' 상품이 성공적으로 등록되었습니다.")
-                        st.rerun()
-                else:
-                    st.warning("상품코드와 상품명을 입력해주세요.")
-
-    # 하단: 등록된 상품 리스트 및 삭제
-    st.subheader("📋 등록된 상품 리스트")
-    
-    # 데이터 수정 기능이 포함된 테이블 (Editor)
-    edited_df = st.data_editor(
-        st.session_state.master_data,
-        use_container_width=True,
-        num_rows="dynamic", # 행 삭제 가능
-        key="master_editor"
-    )
-
-    # 저장 버튼 (수정사항 반영)
-    if st.button("변경사항 저장"):
-        st.session_state.master_data = edited_df
-        st.success("상품 정보가 업데이트되었습니다.")
-        st.rerun()
-
-    # 삭제 안내
-    st.info("💡 팁: 표의 왼쪽 체크박스를 선택하고 [Delete] 키를 누르면 행을 삭제할 수 있습니다.")
-    import streamlit as st
 
 if 'inventory' not in st.session_state:
     st.session_state.inventory = pd.DataFrame([
