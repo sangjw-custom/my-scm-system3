@@ -369,3 +369,5 @@ elif menu == "⚙️ 상품 마스터 관리":
             file_name=f"상품마스터_{datetime.now().strftime('%Y%m%d')}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+        else:
+            st.info("등록된 상품 내역이 없습니다.")
