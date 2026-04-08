@@ -144,7 +144,9 @@ elif menu == "🛒 구매 및 입고 관리":
                         
                         db.collection("log").document(row["문서번호"]).update({"유형": "입고", "확정일자": get_now_kst()})
                         st.rerun()
-
+        else:
+            st.info("구매발주 내역이 없습니다.")
+            
 # --- [메뉴 3] 출고 및 처리 관리 ---
 elif menu == "🚚 출고 및 처리 관리":
     st.title("🚚 출고 및 처리 관리")
@@ -187,6 +189,8 @@ elif menu == "🚚 출고 및 처리 관리":
                             st.rerun()
                     else:
                         st.error("해당 프로젝트에 재고가 부족합니다.")
+        else:
+            st.info("출고요청 내역이 없습니다.")
 
 # --- [메뉴 4] 통합 거래 이력 ---
 elif menu == "📋 통합 거래 이력":
