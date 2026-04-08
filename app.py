@@ -166,7 +166,7 @@ elif menu == "⚙️ 상품 마스터 관리":
             c1, c2, c3 = st.columns(3)
             code = c1.text_input("상품코드 (중복불가)")
             name = c2.text_input("상품명")
-            unit = c3.selectbox("단위", ["EA", "m", "kg", "box", "set"])
+            unit = c3.selectbox("단위", ["EA", "m", "kg", "box", "set", "m2", "MAE"])
             in_price = c1.number_input("매입단가", min_value=0, step=100)
             out_price = c2.number_input("판매단가", min_value=0, step=100)
             
