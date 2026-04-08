@@ -155,8 +155,8 @@ elif menu == "🚚 출고 및 처리 관리":
     with t1:
         with st.form("req_form", clear_on_submit=True):
             c1, c2 = st.columns(2)
-            p_code = c1.text_input("프로젝트 코드")
-            p_name = c2.text_input("프로젝트 명")
+            p_code = c1.text_input("프로젝트 코드 (필수)")
+            p_name = c2.text_input("프로젝트 명 (필수)")
             item_name = st.selectbox("출고 품목", master_df["상품명"]) if not master_df.empty else []
             qty = st.number_input("요청 수량", min_value=1, step=1)
             user = st.text_input("요청자")
