@@ -40,23 +40,28 @@ log_df = get_df("log")
 
 # --- [메뉴 1] 실시간 재고 현황 ---
 if menu == "📊 실시간 재고 현황":
-    st.title("📊 실시간 재고 및 자산 현황")
+st.title("📊 실시간 재고 및 자산 현황")
     if not master_df.empty:
-        # 마스터와 재고 합치기
         res = pd.merge(master_df, inv_df, on="상품코드", how="left").fillna(0)
         res["재고금액(매입가)"] = res["매입단가"] * res["현재고"]
         
+        # 메트릭 표시 (포맷팅 적용)
         c1, c2 = st.columns(2)
-        c1.metric("총 재고 자산", f"{int(res['재고금액(매입가)'].sum()):,}원")
-        c2.metric("관리 품목 수", len(res))
+        total_asset = int(res['재고금액(매입가)'].sum())
+        c1.metric("총 재고 자산", f"{total_asset:,}원")
+        c2.metric("관리 품목 수", f"{len(res):,}개")
         
-        st.dataframe(res, use_container_width=True,
-                    column_config={
-                "매입단가": st.column_config.NumberColumn("매입단가", format="#,###"),
-                "판매단가": st.column_config.NumberColumn("판매단가", format="#,###"),
-                "현재고": st.column_config.NumberColumn("현재고", format="#,###"),
-                "재고금액(매입가)": st.column_config.NumberColumn("재고금액(매입가)", format="#,###"),
-            })
+        # 데이터프레임 스타일 설정
+        st.dataframe(
+            res, 
+            use_container_width=True,
+            column_config={
+                "매입단가": st.column_config.NumberColumn("매입단가", format="%d"),
+                "판매단가": st.column_config.NumberColumn("판매단가", format="%d"),
+                "현재고": st.column_config.NumberColumn("현재고", format="%d"),
+                "재고금액(매입가)": st.column_config.NumberColumn("재고금액(매입가)", format="%d"),
+            }
+        )
     else:
         st.info("마스터 관리 메뉴에서 상품을 먼저 등록해 주세요.")
 
@@ -98,7 +103,7 @@ elif menu == "🛒 구매 및 입고 관리":
             if not pending.empty:
                 for _, row in pending.iterrows():
                     col_a, col_b = st.columns([4, 1])
-                    col_a.write(f"[{row['문서번호']}] {row['상품명']} / {row['수량']}개 (입력자: {row['입력자']})")
+                    col_a.write(f"[{row['문서번호']}] {row['상품명']} / {row['수량']:,}개 (입력자: {row['입력자']})")
                     if col_b.button("입고승인", key=row['문서번호']):
                         # 1. 재고 증가
                         inv_ref = db.collection("inventory").document(row["상품코드"])
@@ -146,7 +151,7 @@ elif menu == "🚚 출고 및 처리 관리":
                     cur_stock = inv_doc.to_dict().get("현재고", 0) if inv_doc.exists else 0
                     
                     col_a, col_b = st.columns([4, 1])
-                    col_a.write(f"[{row['문서번호']}] {row['상품명']} {row['수량']}개 (현재고: {cur_stock})")
+                    col_a.write(f"[{row['문서번호']}] {row['상품명']} {row['수량']:,}개 (현재고: {cur_stock})")
                     if col_b.button("출고승인", key=row['문서번호']):
                         if cur_stock >= row["수량"]:
                             inv_ref.update({"현재고": cur_stock - row["수량"]})
@@ -160,18 +165,19 @@ elif menu == "🚚 출고 및 처리 관리":
 
 # --- [메뉴 4] 통합 거래 이력 ---
 elif menu == "📋 통합 거래 이력":
-    st.title("📋 전체 전표 및 거래 이력 조회")
+st.title("📋 전체 전표 및 거래 이력 조회")
     if not log_df.empty:
-        # 최신순 정렬
         log_df['sort_date'] = pd.to_datetime(log_df['입력일자'])
         display_log = log_df.sort_values("sort_date", ascending=False).drop(columns=['sort_date'])
-        st.dataframe(display_log, use_container_width=True,
-        column_config={
-                "총액": st.column_config.NumberColumn("총액", format="#,###"),
-                "수량": st.column_config.NumberColumn("판수량", format="#,###"),
-                "단가": st.column_config.NumberColumn("단가", format="#,###"),
-             }
-        )
+        
+        # 숫자 컬럼들에 대해 콤마 포맷 적용
+        formatted_log = display_log.style.format({
+            "수량": "{:,}",
+            "단가": "{:,}",
+            "총액": "{:,}"
+        })
+        
+        st.dataframe(formatted_log, use_container_width=True)
     else:
         st.info("기록된 거래 이력이 없습니다.")
 
