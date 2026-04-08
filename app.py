@@ -69,7 +69,7 @@ if menu == "📊 실시간 재고 현황":
         
         # 3. 요청하신 순서대로 열 재배열
         ordered_cols = [
-            "상품코드", "상품유형", "상품명", "단위", 
+            "상품유형", "상품코드", "상품명", "단위", 
             "판매단가", "매입단가", "현재고", 
             "재고금액(매입가)"
         ]
@@ -346,9 +346,9 @@ elif menu == "⚙️ 상품 마스터 관리":
                 if code and name:
                     # 2. Firestore 저장 데이터에 상품유형 포함
                     db.collection("master").document(code).set({
+                        "상품유형": str(p_type), # 추가
                         "상품코드": str(code), 
                         "상품명": str(name), 
-                        "상품유형": str(p_type), # 추가
                         "단위": str(unit),
                         "매입단가": int(in_price), 
                         "판매단가": int(out_price)
@@ -371,7 +371,7 @@ elif menu == "⚙️ 상품 마스터 관리":
             master_display[col] = pd.to_numeric(master_display[col], errors='coerce').fillna(0).astype(int)
         
         # 보기 좋은 순서로 열 정렬
-        m_cols = ["상품코드", "상품유형", "상품명", "단위", "매입단가", "판매단가"]
+        m_cols = ["상품유형", "상품코드", "상품명", "단위", "매입단가", "판매단가"]
         master_display = master_display[m_cols]
 
         st.dataframe(
