@@ -95,7 +95,7 @@ elif menu == "🛒 구매 및 입고 관리":
                     doc_no = generate_doc_no("PO")
                     data = {
                             "문서번호": str(doc_no),
-                            "입력일자": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                            "입력일자": get_now_kst(),
                             "유형": "구매발주",
                             "상품코드": str(item_info["상품코드"]),
                             "상품명": str(item_name),
@@ -192,7 +192,7 @@ elif menu == "🚚 출고 및 처리 관리":
                         # 2. [핵심] Firestore 전송용 데이터 구성 (강제 형변환)
                         data = {
                             "문서번호": str(doc_no),
-                            "입력일자": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                            "입력일자": get_now_kst(),
                             "유형": "출고요청",
                             "상품코드": str(item_info["상품코드"]),
                             "상품명": str(item_name),
