@@ -191,6 +191,13 @@ elif menu == "📋 통합 거래 이력":
         st.info("기록된 거래 이력이 없습니다.")
 
 # --- [메뉴 5] 상품 마스터 관리 ---
+상품 마스터 관리 메뉴의 리스트에도 동일하게 천 단위 콤마(,)가 표시되도록 코드를 수정해 드리겠습니다.
+
+이 부분은 st.table이나 기본 st.dataframe을 사용하고 계실 텐데, 가장 확실한 방법인 style.format을 적용하여 수정하겠습니다. app.py의 [메뉴 5] 상품 마스터 관리 하단 부분을 아래 코드로 교체해 보세요.
+
+⚙️ 상품 마스터 관리 (리스트 콤마 적용 버전)
+Python
+# --- [메뉴 5] 상품 마스터 관리 ---
 elif menu == "⚙️ 상품 마스터 관리":
     st.title("⚙️ 상품 마스터 관리")
     
@@ -199,21 +206,24 @@ elif menu == "⚙️ 상품 마스터 관리":
             c1, c2, c3 = st.columns(3)
             code = c1.text_input("상품코드 (중복불가)")
             name = c2.text_input("상품명")
-            unit = c3.selectbox("단위", ["EA", "m", "kg", "box", "set", "m2", "MAE"])
+            unit = c3.selectbox("단위", ["EA", "m", "kg", "box", "set"])
             in_price = c1.number_input("매입단가", min_value=0, step=100)
             out_price = c2.number_input("판매단가", min_value=0, step=100)
-
+            
             if st.form_submit_button("상품 저장"):
                 if code and name:
-                    # 마스터 데이터 저장
+                    # 마스터 데이터 저장 (int로 강제 형변환하여 저장)
                     db.collection("master").document(code).set({
-                        "상품코드": code, "상품명": name, "단위": unit,
-                        "매입단가": in_price, "판매단가": out_price
+                        "상품코드": str(code), 
+                        "상품명": str(name), 
+                        "단위": str(unit),
+                        "매입단가": int(in_price), 
+                        "판매단가": int(out_price)
                     })
-                    # 재고 데이터 초기화 (해당 상품코드로 재고 문서가 없을 때만 0으로 생성)
+                    # 재고 데이터 초기화
                     inv_ref = db.collection("inventory").document(code)
                     if not inv_ref.get().exists:
-                        inv_ref.set({"상품코드": code, "현재고": 0})
+                        inv_ref.set({"상품코드": str(code), "현재고": 0})
                     
                     st.success(f"상품 '{name}' 등록 완료!")
                     st.rerun()
@@ -222,7 +232,22 @@ elif menu == "⚙️ 상품 마스터 관리":
 
     st.subheader("📋 등록된 상품 리스트")
     if not master_df.empty:
-        st.table(master_df)
+        # 데이터프레임의 숫자 타입을 다시 한번 확인하고 콤마 포맷 적용
+        master_display = master_df.copy()
+        
+        # 숫자 컬럼 강제 형변환 (안전장치)
+        for col in ["매입단가", "판매단가"]:
+            master_display[col] = pd.to_numeric(master_display[col], errors='coerce').fillna(0).astype(int)
+
+        # 콤마 포맷팅하여 출력
+        st.dataframe(
+            master_display.style.format({
+                "매입단가": "{:,}",
+                "판매단가": "{:,}"
+            }),
+            use_container_width=True,
+            hide_index=True
+        )
     else:
         st.info("등록된 상품이 없습니다.")
         
