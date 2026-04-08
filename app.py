@@ -334,8 +334,7 @@ elif menu == "⚙️ 상품 마스터 관리":
     tab1, tab2 = st.tabs(["➕ 개별 등록", "📁 엑셀 대량 등록"])
     
     with tab1: 
-        with st.expander("➕ 신규 상품 등록", expanded=True):
-        with st.form("master_form", clear_on_submit=True):
+       with st.form("master_form", clear_on_submit=True):
             c1, c2, c3 = st.columns(3)
             code = c1.text_input("상품코드 (중복불가)")
             name = c2.text_input("상품명")
