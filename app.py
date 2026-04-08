@@ -262,7 +262,7 @@ elif menu == "🚚 출고 및 처리 관리":
                     
                     req_qty = int(row["수량"])
                     
-                    r_cols = st.columns([2, 2, 1, 1, 2, 1.5])
+                    r_cols = st.columns([1.5, 2, 0.8, 0.8, 1.8, 1.2, 1.2])
                     
                     # 데이터 포맷팅 (콤마 추가)
                     r_cols[0].write(row['문서번호'])
