@@ -243,7 +243,7 @@ elif menu == "🚚 출고 및 처리 관리":
             
             if not reqs.empty:
                 # 1. 표 헤더 설정
-                cols = st.columns([2, 2, 1, 1, 2, 1.5])
+                cols = st.columns([1.5, 2, 0.8, 0.8, 1.8, 1.2, 1.2])
                 cols[0].write("**문서번호**")
                 cols[1].write("**상품명**")
                 cols[2].write("**요청수량**")
