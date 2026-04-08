@@ -3,12 +3,21 @@ import pandas as pd
 from google.cloud import firestore
 from google.oauth2 import service_account
 from datetime import datetime
-import pytz  # 상단에 추가
+import pytz
+import io 
 
 def get_now_kst():
     """현재 한국 시간을 반환하는 함수"""
     return datetime.now(pytz.timezone('Asia/Seoul')).strftime('%Y-%m-%d %H:%M')
 
+def convert_df_to_excel(df):
+    """데이터프레임을 엑셀 바이트로 변환하는 함수"""
+    output = io.BytesIO()
+    # 콤마 등이 포함된 '스타일러'가 아닌 원본 데이터프레임(res)을 넣어야 합니다.
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Sheet1')
+    return output.getvalue()
+    
 # 1. 페이지 설정
 st.set_page_config(page_title="Firestore Cloud SCM", layout="wide")
 
@@ -83,6 +92,14 @@ if menu == "📊 실시간 재고 현황":
             }),
             use_container_width=True,
             hide_index=True
+        )
+        # 엑셀 다운로드 버튼 생성
+        excel_data = convert_df_to_excel(res) # res는 순수 숫자 데이터가 있는 DF
+        st.download_button(
+            label="Excel 파일 다운로드",
+            data=excel_data,
+            file_name=f"실시간재고현황_{datetime.now().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     else:
         st.info("마스터 관리 메뉴에서 상품을 먼저 등록해 주세요.")
@@ -298,6 +315,14 @@ elif menu == "📋 통합 거래 이력":
         })
         
         st.dataframe(formatted_log, use_container_width=True)
+        # 엑셀 다운로드 버튼 생성
+        excel_data = convert_df_to_excel(display_log) 
+        st.download_button(
+            label="Excel 파일 다운로드",
+            data=excel_data,
+            file_name=f"통합거래이력_{datetime.now().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
     else:
         st.info("기록된 거래 이력이 없습니다.")
 
