@@ -225,7 +225,8 @@ elif menu == "🚚 출고 및 처리 관리":
                 cols[2].write("**요청수량**")
                 cols[3].write("**현재고**")
                 cols[4].write("**요청일자**")
-                cols[5].write("**액션**")
+                cols[5].write("**요청자**")
+                cols[6].write("**액션**")
                 st.divider()
 
                 # 2. 데이터 행 반복 생성
@@ -251,10 +252,11 @@ elif menu == "🚚 출고 및 처리 관리":
                         r_cols[3].write(f"{cur_stock:,}")
                     
                     r_cols[4].write(row['입력일자'])
+                    r_cols[5].write(row.get('입자', '-'))
                     
                     # 3. 승인 버튼 (재고 부족 시 작동 방지)
                     if cur_stock >= req_qty:
-                        if r_cols[5].button("🚚 출고승인", key=f"out_{row['문서번호']}"):
+                        if r_cols[6].button("🚚 출고승인", key=f"out_{row['문서번호']}"):
                             with st.spinner("처리 중..."):
                                 # A. 재고 차감
                                 inv_ref.update({"현재고": cur_stock - req_qty})
