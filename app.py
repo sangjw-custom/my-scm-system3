@@ -334,7 +334,7 @@ elif menu == "⚙️ 상품 마스터 관리":
     tab1, tab2 = st.tabs(["➕ 개별 등록", "📁 엑셀 대량 등록"])
     
     with tab1: 
-    # with st.expander("➕ 신규 상품 등록", expanded=True):
+        with st.expander("➕ 신규 상품 등록", expanded=True):
         with st.form("master_form", clear_on_submit=True):
             c1, c2, c3 = st.columns(3)
             code = c1.text_input("상품코드 (중복불가)")
@@ -366,7 +366,8 @@ elif menu == "⚙️ 상품 마스터 관리":
                     st.rerun()
                 else:
                     st.error("상품코드와 상품명은 필수 입력 항목입니다.")
-     with tab2:
+                    
+    with tab2:
         st.subheader("📁 엑셀 파일을 이용한 일괄 등록")
         
         # 1. 업로드 양식 제공
