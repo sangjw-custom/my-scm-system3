@@ -48,16 +48,23 @@ log_df = get_df("log")
 if menu == "📊 실시간 재고 현황":
     st.title("📊 실시간 재고 및 자산 현황")
     if not master_df.empty:
-        # 1. 데이터 병합
+        # 1. 데이터 병합 및 계산
         res = pd.merge(master_df, inv_df, on="상품코드", how="left").fillna(0)
         
-        # 2. 숫자형으로 완벽하게 고정 (int64라도 다시 한번 확인)
+        # 2. 숫자형 강제 변환 (콤마 표시를 위함)
         num_cols = ["매입단가", "판매단가", "현재고"]
         for col in num_cols:
             res[col] = pd.to_numeric(res[col], errors='coerce').fillna(0).astype(int)
             
-        # 3. 재고금액 계산
         res["재고금액(매입가)"] = res["매입단가"] * res["현재고"]
+        
+        # 3. 요청하신 순서대로 열 재배열
+        ordered_cols = [
+            "상품코드", "상품명", "단위", 
+            "판매단가", "매입단가", "현재고", 
+            "재고금액(매입가)"
+        ]
+        res = res[ordered_cols] # 열 순서 고정
         
         # 4. 상단 요약 지표 (Metric)
         c1, c2 = st.columns(2)
@@ -65,17 +72,17 @@ if menu == "📊 실시간 재고 현황":
         c1.metric("총 재고 자산", f"{total_asset:,}원")
         c2.metric("관리 품목 수", f"{len(res):,}개")
         
-        # 5. 스타일러를 이용한 콤마 출력 (가장 확실한 방법)
-        # 모든 숫자 컬럼에 천 단위 콤마(,)를 넣습니다.
+        # 5. 스타일러를 이용한 표 출력 (천 단위 콤마 적용)
         st.write("##### 📋 상세 재고 리스트")
         st.dataframe(
             res.style.format({
-                "매입단가": "{:,}",
                 "판매단가": "{:,}",
+                "매입단가": "{:,}",
                 "현재고": "{:,}",
                 "재고금액(매입가)": "{:,}"
             }),
-            use_container_width=True
+            use_container_width=True,
+            hide_index=True
         )
     else:
         st.info("마스터 관리 메뉴에서 상품을 먼저 등록해 주세요.")
