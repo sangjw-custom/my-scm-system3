@@ -40,7 +40,7 @@ log_df = get_df("log")
 
 # --- [메뉴 1] 실시간 재고 현황 ---
 if menu == "📊 실시간 재고 현황":
-st.title("📊 실시간 재고 및 자산 현황")
+    st.title("📊 실시간 재고 및 자산 현황")
     if not master_df.empty:
         res = pd.merge(master_df, inv_df, on="상품코드", how="left").fillna(0)
         res["재고금액(매입가)"] = res["매입단가"] * res["현재고"]
