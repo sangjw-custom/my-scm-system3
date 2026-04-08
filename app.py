@@ -45,9 +45,9 @@ if menu == "📊 실시간 재고 현황":
         # 1. 데이터 병합 및 계산
         # inventory 데이터가 비어있을 수 있으므로 fillna(0) 처리
         res = pd.merge(master_df, inv_df, on="상품코드", how="left").fillna(0)
+        res["재고금액(매입가)"] = res["매입단가"] * res["현재고"]
         cols = ["매입단가", "판매단가", "현재고", "재고금액(매입가)"]
         res[cols] = res[cols].apply(pd.to_numeric, errors='coerce').fillna(0)
-        res["재고금액(매입가)"] = res["매입단가"] * res["현재고"]
         
         # 2. 상단 요약 지표 (Metric) - f-string 포맷 사용
         c1, c2 = st.columns(2)
