@@ -330,7 +330,11 @@ elif menu == "📋 통합 거래 이력":
 elif menu == "⚙️ 상품 마스터 관리":
     st.title("⚙️ 상품 마스터 관리")
     
-    with st.expander("➕ 신규 상품 등록", expanded=True):
+    # 탭 구성: 개별 등록 / 엑셀 대량 등록
+    tab1, tab2 = st.tabs(["➕ 개별 등록", "📁 엑셀 대량 등록"])
+    
+    with tab1: 
+    # with st.expander("➕ 신규 상품 등록", expanded=True):
         with st.form("master_form", clear_on_submit=True):
             c1, c2, c3 = st.columns(3)
             code = c1.text_input("상품코드 (중복불가)")
@@ -362,6 +366,71 @@ elif menu == "⚙️ 상품 마스터 관리":
                     st.rerun()
                 else:
                     st.error("상품코드와 상품명은 필수 입력 항목입니다.")
+     with tab2:
+        st.subheader("📁 엑셀 파일을 이용한 일괄 등록")
+        
+        # 1. 업로드 양식 제공
+        template_data = pd.DataFrame(columns=["상품코드", "상품명", "상품유형", "단위", "매입단가", "판매단가"])
+        template_excel = convert_df_to_excel(template_data)
+        st.download_button(
+            label="📥 업로드 양식(Excel) 다운로드",
+            data=template_excel,
+            file_name="상품마스터_업로드양식.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        st.divider()
+        
+        # 2. 파일 업로드
+        uploaded_file = st.file_uploader("양식에 맞게 작성된 엑셀 파일을 업로드하세요.", type=["xlsx"])
+        
+        if uploaded_file:
+            df_upload = pd.read_excel(uploaded_file)
+            st.write("▲ 업로드 데이터 미리보기")
+            st.dataframe(df_upload, use_container_width=True)
+            
+            if st.button("🔥 데이터 일괄 저장 실행"):
+                with st.spinner("데이터를 저장 중입니다..."):
+                    try:
+                        batch = db.batch() # 일괄 처리를 위한 배치 생성
+                        count = 0
+                        
+                        for _, row in df_upload.iterrows():
+                            # 필수 데이터 확인
+                            if pd.isna(row['상품코드']) or pd.isna(row['상품명']):
+                                continue
+                                
+                            code = str(row['상품코드'])
+                            # master 컬렉션 저장 데이터
+                            master_ref = db.collection("master").document(code)
+                            batch.set(master_ref, {
+                                "상품코드": code,
+                                "상품명": str(row['상품명']),
+                                "상품유형": str(row['상품유형']) if not pd.isna(row['상품유형']) else "미분류",
+                                "단위": str(row['단위']) if not pd.isna(row['단위']) else "EA",
+                                "매입단가": int(row['매입단가']) if not pd.isna(row['매입단가']) else 0,
+                                "판매단가": int(row['판매단가']) if not pd.isna(row['판매단가']) else 0
+                            })
+                            
+                            # inventory 컬렉션 초기화 (재고가 없을 때만 0으로 설정)
+                            inv_ref = db.collection("inventory").document(code)
+                            batch.set(inv_ref, {"상품코드": code, "현재고": 0}, merge=True)
+                            
+                            count += 1
+                            
+                            # Firestore 배치는 한 번에 최대 500개까지만 가능
+                            if count % 400 == 0:
+                                batch.commit()
+                                batch = db.batch()
+                        
+                        batch.commit() # 남은 데이터 저장
+                        st.success(f"✅ 총 {count}개의 상품이 성공적으로 등록되었습니다!")
+                        st.rerun()
+                        
+                    except Exception as e:
+                        st.error(f"❌ 저장 중 오류 발생: {e}")
+
+    # (하단 등록된 상품 리스트 표시 코드는 기존과 동일하게 유지)
 
     st.subheader("📋 등록된 상품 리스트")
     if not master_df.empty:
