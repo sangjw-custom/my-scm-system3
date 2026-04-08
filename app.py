@@ -45,11 +45,10 @@ if menu == "📊 실시간 재고 현황":
         # 1. 데이터 병합
         res = pd.merge(master_df, inv_df, on="상품코드", how="left").fillna(0)
         
-        # 2. [중요] 숫자형 컬럼 강제 형변환 (이 부분이 핵심입니다)
-        # 데이터가 문자열로 읽혔더라도 강제로 숫자로 바꿔 콤마가 찍히게 합니다.
+        # 2. 숫자형으로 완벽하게 고정 (int64라도 다시 한번 확인)
         num_cols = ["매입단가", "판매단가", "현재고"]
         for col in num_cols:
-            res[col] = pd.to_numeric(res[col], errors='coerce').fillna(0)
+            res[col] = pd.to_numeric(res[col], errors='coerce').fillna(0).astype(int)
             
         # 3. 재고금액 계산
         res["재고금액(매입가)"] = res["매입단가"] * res["현재고"]
@@ -60,17 +59,17 @@ if menu == "📊 실시간 재고 현황":
         c1.metric("총 재고 자산", f"{total_asset:,}원")
         c2.metric("관리 품목 수", f"{len(res):,}개")
         
-        # 5. 데이터프레임 표시
+        # 5. 스타일러를 이용한 콤마 출력 (가장 확실한 방법)
+        # 모든 숫자 컬럼에 천 단위 콤마(,)를 넣습니다.
+        st.write("##### 📋 상세 재고 리스트")
         st.dataframe(
-            res, 
-            use_container_width=True,
-            column_config={
-                "매입단가": st.column_config.NumberColumn("매입단가", format="%d"),
-                "판매단가": st.column_config.NumberColumn("판매단가", format="%d"),
-                "현재고": st.column_config.NumberColumn("현재고", format="%d"),
-                "재고금액(매입가)": st.column_config.NumberColumn("재고금액(매입가)", format="%d"),
-            },
-            hide_index=True
+            res.style.format({
+                "매입단가": "{:,}",
+                "판매단가": "{:,}",
+                "현재고": "{:,}",
+                "재고금액(매입가)": "{:,}"
+            }),
+            use_container_width=True
         )
     else:
         st.info("마스터 관리 메뉴에서 상품을 먼저 등록해 주세요.")
