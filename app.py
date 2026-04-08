@@ -49,7 +49,7 @@ inv_df = get_df("inventory")
 log_df = get_df("log")
 
 # --- 3. 사이드바 메뉴 ---
-st.sidebar.title("🏢 프로젝트 SCM")
+st.sidebar.title("🏢 프로젝트별 상품 재고관리(외부)")
 menu = st.sidebar.radio("메뉴 선택", [
     "📊 프로젝트별 재고 현황", 
     "🛒 구매 및 입고 관리", 
