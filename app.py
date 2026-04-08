@@ -379,8 +379,8 @@ elif menu == "⚙️ 상품 마스터 관리":
             use_container_width=True,
             hide_index=True
         )
-                # 엑셀 다운로드 버튼 생성
-        excel_data = convert_df_to_excel(display_log) 
+       # 엑셀 다운로드 버튼 생성
+        excel_data = convert_df_to_excel(master_display) 
         st.download_button(
             label="Excel 파일 다운로드",
             data=excel_data,
