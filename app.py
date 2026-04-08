@@ -53,252 +53,145 @@ master_df = get_df("master")
 inv_df = get_df("inventory")
 log_df = get_df("log")
 
-# --- [메뉴 1] 실시간 재고 현황 ---
-if menu == "📊 실시간 재고 현황":
-    st.title("📊 실시간 재고 및 자산 현황")
-    if not master_df.empty:
-        # 1. 데이터 병합 및 계산
-        res = pd.merge(master_df, inv_df, on="상품코드", how="left").fillna(0)
+# --- 3. 사이드바 메뉴 ---
+st.sidebar.title("🏢 프로젝트 SCM")
+menu = st.sidebar.radio("메뉴 선택", [
+    "📊 프로젝트별 재고 현황", 
+    "🛒 구매 및 입고 관리", 
+    "🚚 출고 및 처리 관리", 
+    "📋 통합 거래 이력", 
+    "⚙️ 상품 마스터 관리"
+])
+
+# --- [메뉴 1] 프로젝트별 재고 현황 ---
+if menu == "📊 프로젝트별 재고 현황":
+    st.title("📊 프로젝트별 실시간 재고 현황")
+    if not inv_df.empty and not master_df.empty:
+        # 재고 데이터와 마스터 데이터 결합
+        res = pd.merge(inv_df, master_df, on="상품코드", how="left").fillna("-")
         
-        # 2. 숫자형 강제 변환 (콤마 표시를 위함)
-        num_cols = ["매입단가", "판매단가", "현재고"]
-        for col in num_cols:
+        # 숫자형 변환
+        for col in ["매입단가", "판매단가", "현재고"]:
             res[col] = pd.to_numeric(res[col], errors='coerce').fillna(0).astype(int)
-            
-        res["재고금액(매입가)"] = res["매입단가"] * res["현재고"]
         
-        # 3. 요청하신 순서대로 열 재배열
-        ordered_cols = [
-            "상품유형", "상품코드", "상품명", "단위", 
-            "판매단가", "매입단가", "현재고", 
-            "재고금액(매입가)"
-        ]
-        res = res[ordered_cols]
+        res["재고금액"] = res["매입단가"] * res["현재고"]
         
-        # 4. 상단 요약 지표 (Metric)
+        # 열 순서 (프로젝트 정보 전면 배치)
+        ordered_cols = ["프로젝트코드", "프로젝트명", "상품유형", "상품코드", "상품명", "단위", "현재고", "재고금액"]
+        res = res[ordered_cols].sort_values(["프로젝트코드", "상품코드"])
+        
+        # 상단 필터
+        p_list = ["전체"] + sorted(res["프로젝트명"].unique().tolist())
+        selected_p = st.selectbox("📂 프로젝트 필터", p_list)
+        
+        display_df = res if selected_p == "전체" else res[res["프로젝트명"] == selected_p]
+        
+        # 요약 지표
         c1, c2 = st.columns(2)
-        total_asset = int(res['재고금액(매입가)'].sum())
-        c1.metric("총 재고 자산", f"{total_asset:,}원")
-        c2.metric("관리 품목 수", f"{len(res):,}개")
+        c1.metric("선택된 프로젝트 자산", f"{int(display_df['재고금액'].sum()):,}원")
+        c2.metric("보유 품목 수", f"{len(display_df):,}개")
         
-        # 5. 스타일러를 이용한 표 출력 (천 단위 콤마 적용)
-        st.write("##### 📋 상세 재고 리스트")
-        st.dataframe(
-            res.style.format({
-                "판매단가": "{:,}",
-                "매입단가": "{:,}",
-                "현재고": "{:,}",
-                "재고금액(매입가)": "{:,}"
-            }),
-            use_container_width=True,
-            hide_index=True
-        )
-        # 엑셀 다운로드 버튼 생성
-        excel_data = convert_df_to_excel(res) # res는 순수 숫자 데이터가 있는 DF
-        st.download_button(
-            label="Excel 파일 다운로드",
-            data=excel_data,
-            file_name=f"실시간재고현황_{datetime.now().strftime('%Y%m%d')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+        st.dataframe(display_df.style.format({
+            "현재고": "{:,}", "재고금액": "{:,}"
+        }), use_container_width=True, hide_index=True)
+        
+        st.download_button("📥 엑셀 다운로드", convert_df_to_excel(display_df), f"프로젝트재고_{get_now_kst()}.xlsx")
     else:
-        st.info("마스터 관리 메뉴에서 상품을 먼저 등록해 주세요.")
+        st.info("등록된 재고 데이터가 없습니다.")
 
 # --- [메뉴 2] 구매 및 입고 관리 ---
 elif menu == "🛒 구매 및 입고 관리":
-    st.title("🛒 구매 및 입고 프로세스")
-    t1, t2 = st.tabs(["📝 신규 구매발주", "📥 입고 확정 처리"])
+    st.title("🛒 구매 및 입고 관리")
+    t1, t2 = st.tabs(["🆕 신규 구매발주", "📥 입고 확정 처리"])
     
     with t1:
-        if not master_df.empty:
-            with st.form("po_form", clear_on_submit=True):
-                item_name = st.selectbox("품목 선택", master_df["상품명"])
-                qty = st.number_input("발주 수량", min_value=1, step=1)
-                user = st.text_input("입력자(발주자)")
-                if st.form_submit_button("구매발주 등록"):
+        with st.form("po_form", clear_on_submit=True):
+            c1, c2 = st.columns(2)
+            p_code = c1.text_input("프로젝트 코드 (필수)")
+            p_name = c2.text_input("프로젝트 명 (필수)")
+            item_name = st.selectbox("발주 품목", master_df["상품명"]) if not master_df.empty else []
+            qty = st.number_input("발주 수량", min_value=1, step=1)
+            user = st.text_input("발주 담당자")
+            if st.form_submit_button("구매발주 등록"):
+                if p_code and p_name:
                     item_info = master_df[master_df["상품명"] == item_name].iloc[0]
                     doc_no = generate_doc_no("PO")
                     data = {
-                            "문서번호": str(doc_no),
-                            "입력일자": get_now_kst(),
-                            "유형": "구매발주",
-                            "상품코드": str(item_info["상품코드"]),
-                            "상품명": str(item_name),
-                            "수량": int(qty),
-                            "단가": int(item_info["매입단가"]),
-                            "총액": int(qty * item_info["매입단가"]),
-                            "입력자": str(user),
-                            "상태": "발주완료"
-                        }
+                        "문서번호": doc_no, "입력일자": get_now_kst(), "유형": "구매발주",
+                        "프로젝트코드": str(p_code), "프로젝트명": str(p_name),
+                        "상품코드": str(item_info["상품코드"]), "상품명": str(item_name),
+                        "수량": int(qty), "단가": int(item_info["매입단가"]),
+                        "총액": int(qty * item_info["매입단가"]), "입력자": str(user), "상태": "발주완료"
+                    }
                     db.collection("log").document(doc_no).set(data)
-                    st.success(f"발주 완료: {doc_no}")
-                    st.rerun()
-        else:
-            st.warning("상품 마스터가 비어 있습니다.")
-
+                    st.success("발주 등록 완료"); st.rerun()
+                else: st.error("프로젝트 정보를 입력해주세요.")
+    
     with t2:
-        st.subheader("📥 입고 대기 목록")
-        if not log_df.empty:
-            # 구매발주 상태인 데이터만 필터링
-            pending = log_df[log_df["유형"] == "구매발주"].copy()
-            
-            if not pending.empty:
-                # 1. 표 헤더 설정
-                cols = st.columns([2, 2, 1, 2, 1.5, 1.5])
-                cols[0].write("**문서번호**")
-                cols[1].write("**상품명**")
-                cols[2].write("**수량**")
-                cols[3].write("**발주일자**")
-                cols[4].write("**담당자**")
-                cols[5].write("**액션**")
-                st.divider()
-
-                # 2. 데이터 행 반복 생성
-                for _, row in pending.iterrows():
-                    r_cols = st.columns([2, 2, 1, 2, 1.5, 1.5])
-                    
-                    # 데이터 추출 및 콤마 포맷팅
-                    doc_no = row['문서번호']
-                    item_name = row['상품명']
-                    # 수량을 정수로 변환 후 콤마 추가
-                    qty_formatted = f"{int(row['수량']):,}"
-                    date_str = row['입력일자']
-                    user_str = row['입력자']
-                    
-                    r_cols[0].write(doc_no)
-                    r_cols[1].write(item_name)
-                    r_cols[2].write(f"**{qty_formatted}**") # 수량 강조
-                    r_cols[3].write(date_str)
-                    r_cols[4].write(user_str)
-                    
-                    # 승인 버튼
-                    if r_cols[5].button("✅ 입고승인", key=f"btn_{doc_no}"):
-                        with st.spinner("처리 중..."):
-                            # A. 재고 업데이트
-                            inv_ref = db.collection("inventory").document(row["상품코드"])
-                            inv_doc = inv_ref.get()
-                            cur_stock = inv_doc.to_dict().get("현재고", 0) if inv_doc.exists else 0
-                            
-                            # 안전하게 숫자로 변환 후 계산
-                            new_stock = int(cur_stock) + int(row["수량"])
-                            inv_ref.set({"상품코드": row["상품코드"], "현재고": new_stock})
-                            
-                            # B. 로그 상태 변경
-                            db.collection("log").document(doc_no).update({
-                                "유형": "입고",
-                                "상태": "입고완료",
-                                "확정일자": datetime.now().strftime("%Y-%m-%d %H:%M")
-                            })
-                            
-                        st.success(f"[{item_name}] {qty_formatted}개 입고 완료!")
+        pending = log_df[log_df["유형"] == "구매발주"].copy() if not log_df.empty else pd.DataFrame()
+        if not pending.empty:
+            for _, row in pending.iterrows():
+                with st.expander(f"📦 {row['프로젝트명']} | {row['상품명']} ({row['수량']}개)"):
+                    st.write(f"발주일자: {row['입력일자']} / 발주자: {row['입력자']}")
+                    if st.button("✅ 입고 확정", key=f"in_{row['문서번호']}"):
+                        # 프로젝트별 재고 ID 생성 (상품코드_프로젝트코드)
+                        inv_id = f"{row['상품코드']}_{row['프로젝트코드']}"
+                        inv_ref = db.collection("inventory").document(inv_id)
+                        inv_doc = inv_ref.get()
+                        
+                        cur_stock = inv_doc.to_dict().get("현재고", 0) if inv_doc.exists else 0
+                        inv_ref.set({
+                            "상품코드": row["상품코드"],
+                            "프로젝트코드": row["프로젝트코드"],
+                            "프로젝트명": row["프로젝트명"],
+                            "현재고": int(cur_stock) + int(row["수량"])
+                        }, merge=True)
+                        
+                        db.collection("log").document(row["문서번호"]).update({"유형": "입고", "확정일자": get_now_kst()})
                         st.rerun()
-            else:
-                st.info("입고 대기 중인 발주 내역이 없습니다.")
 
 # --- [메뉴 3] 출고 및 처리 관리 ---
 elif menu == "🚚 출고 및 처리 관리":
-    st.title("🚚 출고 관리 프로세스")
-    t1, t2 = st.tabs(["📝 출고 요청 등록", "📤 출고 승인 처리"])
+    st.title("🚚 출고 및 처리 관리")
+    t1, t2 = st.tabs(["📤 출고 요청 등록", "✅ 출고 승인 처리"])
     
     with t1:
-        if not master_df.empty:
-            with st.form("req_form", clear_on_submit=True):
-                item_name = st.selectbox("출고 품목", master_df["상품명"])
-                qty = st.number_input("요청 수량", min_value=1, step=1)
-                user = st.text_input("요청자")
-                
-                if st.form_submit_button("출고 요청"):
-                    # 1. 마스터 정보 찾기
-                    selected_items = master_df[master_df["상품명"] == item_name]
-                    if not selected_items.empty:
-                        item_info = selected_items.iloc[0]
-                        doc_no = generate_doc_no("REQ")
-                        
-                        # 2. [핵심] Firestore 전송용 데이터 구성 (강제 형변환)
-                        data = {
-                            "문서번호": str(doc_no),
-                            "입력일자": get_now_kst(),
-                            "유형": "출고요청",
-                            "상품코드": str(item_info["상품코드"]),
-                            "상품명": str(item_name),
-                            "수량": int(qty),
-                            "단가": int(item_info["판매단가"]),
-                            "총액": int(qty * item_info["판매단가"]),
-                            "입력자": str(user),
-                            "상태": "대기"
-                        }
-                        
-                        # 3. 데이터 저장
-                        db.collection("log").document(doc_no).set(data)
-                        st.success(f"출고 요청 완료: {doc_no}")
-                        st.rerun()
-                    else:
-                        st.error("상품 정보를 찾을 수 없습니다.")
+        with st.form("req_form", clear_on_submit=True):
+            c1, c2 = st.columns(2)
+            p_code = c1.text_input("프로젝트 코드 (재고가 있는 코드)")
+            p_name = c2.text_input("프로젝트 명")
+            item_name = st.selectbox("출고 품목", master_df["상품명"]) if not master_df.empty else []
+            qty = st.number_input("요청 수량", min_value=1, step=1)
+            user = st.text_input("요청자")
+            if st.form_submit_button("출고 요청"):
+                item_info = master_df[master_df["상품명"] == item_name].iloc[0]
+                doc_no = generate_doc_no("REQ")
+                data = {
+                    "문서번호": doc_no, "입력일자": get_now_kst(), "유형": "출고요청",
+                    "프로젝트코드": str(p_code), "프로젝트명": str(p_name),
+                    "상품코드": str(item_info["상품코드"]), "상품명": str(item_name),
+                    "수량": int(qty), "단가": int(item_info["판매단가"]),
+                    "총액": int(qty * item_info["판매단가"]), "입력자": str(user), "상태": "대기"
+                }
+                db.collection("log").document(doc_no).set(data)
+                st.success("출고 요청 완료"); st.rerun()
 
     with t2:
-        st.subheader("📤 출고 대기 및 승인")
-        if not log_df.empty:
-            # 출고요청 상태인 데이터만 필터링
-            reqs = log_df[log_df["유형"] == "출고요청"].copy()
-            
-            if not reqs.empty:
-                # 1. 표 헤더 설정
-                cols = st.columns([1.5, 2, 0.8, 0.8, 1.8, 1.2, 1.2])
-                cols[0].write("**문서번호**")
-                cols[1].write("**상품명**")
-                cols[2].write("**요청수량**")
-                cols[3].write("**현재고**")
-                cols[4].write("**요청일자**")
-                cols[5].write("**요청자**")
-                cols[6].write("**액션**")
-                st.divider()
-
-                # 2. 데이터 행 반복 생성
-                for _, row in reqs.iterrows():
-                    # 현재 재고 상태 확인
-                    inv_ref = db.collection("inventory").document(row["상품코드"])
-                    inv_doc = inv_ref.get()
-                    cur_stock = int(inv_doc.to_dict().get("현재고", 0)) if inv_doc.exists else 0
-                    
-                    req_qty = int(row["수량"])
-                    
-                    r_cols = st.columns([1.5, 2, 0.8, 0.8, 1.8, 1.2, 1.2])
-                    
-                    # 데이터 포맷팅 (콤마 추가)
-                    r_cols[0].write(row['문서번호'])
-                    r_cols[1].write(row['상품명'])
-                    r_cols[2].write(f"**{req_qty:,}**") # 요청수량
-                    
-                    # 재고 부족 시 빨간색 표시
-                    if cur_stock < req_qty:
-                        r_cols[3].write(f":red[{cur_stock:,}]") 
-                    else:
-                        r_cols[3].write(f"{cur_stock:,}")
-                    
-                    r_cols[4].write(row['입력일자'])
-                    r_cols[5].write(row.get('입력자', '-'))
-                    
-                    # 3. 승인 버튼 (재고 부족 시 작동 방지)
-                    if cur_stock >= req_qty:
-                        if r_cols[6].button("🚚 출고승인", key=f"out_{row['문서번호']}"):
-                            with st.spinner("처리 중..."):
-                                # A. 재고 차감
-                                inv_ref.update({"현재고": cur_stock - req_qty})
-                                
-                                # B. 로그 상태 업데이트
-                                db.collection("log").document(row["문서번호"]).update({
-                                    "유형": "출고",
-                                    "상태": "출고완료",
-                                    "확정일자": get_now_kst()
-                                })
-                            st.success(f"[{row['상품명']}] {req_qty:,}개 출고 완료!")
+        reqs = log_df[log_df["유형"] == "출고요청"].copy() if not log_df.empty else pd.DataFrame()
+        if not reqs.empty:
+            for _, row in reqs.iterrows():
+                inv_id = f"{row['상품코드']}_{row['프로젝트코드']}"
+                inv_doc = db.collection("inventory").document(inv_id).get()
+                cur_stock = inv_doc.to_dict().get("현재고", 0) if inv_doc.exists else 0
+                
+                with st.expander(f"🚚 {row['프로젝트명']} | {row['상품명']} (요청:{row['수량']} / 재고:{cur_stock})"):
+                    if cur_stock >= int(row["수량"]):
+                        if st.button("🚀 출고 승인", key=f"out_{row['문서번호']}"):
+                            db.collection("inventory").document(inv_id).update({"현재고": int(cur_stock) - int(row["수량"])})
+                            db.collection("log").document(row["문서번호"]).update({"유형": "출고", "확정일자": get_now_kst()})
                             st.rerun()
                     else:
-                        r_cols[5].button("⚠️ 재고부족", key=f"out_{row['문서번호']}", disabled=True)
-            else:
-                st.info("대기 중인 출고 요청이 없습니다.")
-        else:
-            st.info("거래 기록이 존재하지 않습니다.")
+                        st.error("해당 프로젝트에 재고가 부족합니다.")
 
 # --- [메뉴 4] 통합 거래 이력 ---
 elif menu == "📋 통합 거래 이력":
