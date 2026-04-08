@@ -3,6 +3,11 @@ import pandas as pd
 from google.cloud import firestore
 from google.oauth2 import service_account
 from datetime import datetime
+import pytz  # 상단에 추가
+
+def get_now_kst():
+    """현재 한국 시간을 반환하는 함수"""
+    return datetime.now(pytz.timezone('Asia/Seoul')).strftime('%Y-%m-%d %H:%M')
 
 # 1. 페이지 설정
 st.set_page_config(page_title="Firestore Cloud SCM", layout="wide")
