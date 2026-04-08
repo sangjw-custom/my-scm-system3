@@ -61,12 +61,6 @@ if menu == "📊 실시간 재고 현황":
                 "현재고": st.column_config.NumberColumn("현재고", format="%d"),
                 "재고금액(매입가)": st.column_config.NumberColumn("재고금액(매입가)", format="%d"),
             })
-            formatted_log = display_log.style.format({
-                "매입단가": "{:,}"),
-                "판매단가": "{:,}"),
-                "현재고": "{:,}"),
-                "재고금액(매입가)": "{:,}"),
-            })
     else:
         st.info("마스터 관리 메뉴에서 상품을 먼저 등록해 주세요.")
 
@@ -198,10 +192,7 @@ elif menu == "⚙️ 상품 마스터 관리":
             unit = c3.selectbox("단위", ["EA", "m", "kg", "box", "set", "m2", "MAE"])
             in_price = c1.number_input("매입단가", min_value=0, step=100)
             out_price = c2.number_input("판매단가", min_value=0, step=100)
-        formatted_log = display_log.style.format({
-            "매입단가": "{:,}",
-            "판매단가": "{:,}",
-        })
+
             if st.form_submit_button("상품 저장"):
                 if code and name:
                     # 마스터 데이터 저장
