@@ -30,8 +30,9 @@ def get_df(collection_name):
     return pd.DataFrame(data) if data else pd.DataFrame()
 
 def generate_doc_no(prefix):
-    """문서 번호 자동 생성 (유형-날짜시분초)"""
-    return f"{prefix}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    """한국 시간 기준 문서 번호 생성"""
+    kst_now = datetime.now(pytz.timezone('Asia/Seoul'))
+    return f"{prefix}-{kst_now.strftime('%Y%m%d%H%M%S')}"
 
 # 3. 사이드바 메뉴 구성
 st.sidebar.title("🏢 SCM 클라우드 센터")
