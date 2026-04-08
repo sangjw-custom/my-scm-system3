@@ -210,14 +210,20 @@ elif menu == "📋 통합 거래 이력":
             "총액", "입력자", "문서번호", "입력일자", "확정일자", 
         ]
        
-        # 숫자 컬럼들에 대해 콤마 포맷 적용
-        formatted_log = display_log.style.format({
-            "수량": "{:,}",
-            "단가": "{:,}",
-            "총액": "{:,}"
-        })
+        # 데이터 정리 (결측치 처리 및 순서 고정)
+        display_log = display_log.reindex(columns=history_cols).fillna("-")
+
+        # 4. 숫자형 데이터 콤마 포맷팅 및 표 출력
+        st.dataframe(
+            display_log.style.format({
+                "수량": "{:,}",
+                "단가": "{:,}",
+                "총액": "{:,}"
+            }),
+            use_container_width=True,
+            hide_index=True
+        )
         
-        st.dataframe(formatted_log, use_container_width=True)
         # 엑셀 다운로드 버튼 생성
         excel_data = convert_df_to_excel(display_log) 
         st.download_button(
