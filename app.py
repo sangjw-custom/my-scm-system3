@@ -69,11 +69,11 @@ if menu == "📊 실시간 재고 현황":
         
         # 3. 요청하신 순서대로 열 재배열
         ordered_cols = [
-            "상품코드", "상품명", "단위", 
+            "상품코드", "상품유형", "상품명", "단위", 
             "판매단가", "매입단가", "현재고", 
             "재고금액(매입가)"
         ]
-        res = res[ordered_cols] # 열 순서 고정
+        res = res[ordered_cols]
         
         # 4. 상단 요약 지표 (Metric)
         c1, c2 = st.columns(2)
@@ -335,48 +335,48 @@ elif menu == "⚙️ 상품 마스터 관리":
             c1, c2, c3 = st.columns(3)
             code = c1.text_input("상품코드 (중복불가)")
             name = c2.text_input("상품명")
-            unit = c3.selectbox("단위", ["EA", "m", "kg", "box", "set", "m2", "MAE"])
-            in_price = c1.number_input("매입단가", min_value=0, step=100)
-            out_price = c2.number_input("판매단가", min_value=0, step=100)
+            # 1. 상품유형 추가 (원하는 카테고리로 수정 가능)
+            p_type = c3.selectbox("상품유형", ["완제품", "반제품", "원자재", "부자재", "소모품"])
+            
+            unit = c1.selectbox("단위", ["EA", "m", "kg", "box", "set"])
+            in_price = c2.number_input("매입단가", min_value=0, step=100)
+            out_price = c3.number_input("판매단가", min_value=0, step=100)
             
             if st.form_submit_button("상품 저장"):
                 if code and name:
-                    # 마스터 데이터 저장 (int로 강제 형변환하여 저장)
+                    # 2. Firestore 저장 데이터에 상품유형 포함
                     db.collection("master").document(code).set({
                         "상품코드": str(code), 
                         "상품명": str(name), 
+                        "상품유형": str(p_type), # 추가
                         "단위": str(unit),
                         "매입단가": int(in_price), 
                         "판매단가": int(out_price)
                     })
-                    # 재고 데이터 초기화
+                    
                     inv_ref = db.collection("inventory").document(code)
                     if not inv_ref.get().exists:
                         inv_ref.set({"상품코드": str(code), "현재고": 0})
                     
-                    st.success(f"상품 '{name}' 등록 완료!")
+                    st.success(f"[{p_type}] {name} 등록 완료!")
                     st.rerun()
                 else:
                     st.error("상품코드와 상품명은 필수 입력 항목입니다.")
 
     st.subheader("📋 등록된 상품 리스트")
     if not master_df.empty:
-        # 데이터프레임의 숫자 타입을 다시 한번 확인하고 콤마 포맷 적용
+        # 3. 열 순서 재배치 (유형을 앞쪽으로)
         master_display = master_df.copy()
-        
-        # 숫자 컬럼 강제 형변환 (안전장치)
         for col in ["매입단가", "판매단가"]:
             master_display[col] = pd.to_numeric(master_display[col], errors='coerce').fillna(0).astype(int)
+        
+        # 보기 좋은 순서로 열 정렬
+        m_cols = ["상품코드", "상품유형", "상품명", "단위", "매입단가", "판매단가"]
+        master_display = master_display[m_cols]
 
-        # 콤마 포맷팅하여 출력
         st.dataframe(
-            master_display.style.format({
-                "매입단가": "{:,}",
-                "판매단가": "{:,}"
-            }),
+            master_display.style.format({"매입단가": "{:,}", "판매단가": "{:,}"}),
             use_container_width=True,
             hide_index=True
         )
-    else:
-        st.info("등록된 상품이 없습니다.")
         
