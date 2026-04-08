@@ -44,7 +44,7 @@ def generate_doc_no(prefix):
     return f"{prefix}-{kst_now.strftime('%Y%m%d%H%M%S')}"
 
 # 3. 사이드바 메뉴 구성
-st.sidebar.title("🏢 SCM 클라우드 센터")
+st.sidebar.title("🏢 외부 재고 관리")
 menu = st.sidebar.radio("메뉴 선택", 
     ["📊 실시간 재고 현황", "🛒 구매 및 입고 관리", "🚚 출고 및 처리 관리", "📋 통합 거래 이력", "⚙️ 상품 마스터 관리"])
 
