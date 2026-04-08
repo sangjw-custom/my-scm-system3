@@ -276,7 +276,7 @@ elif menu == "🚚 출고 및 처리 관리":
                         r_cols[3].write(f"{cur_stock:,}")
                     
                     r_cols[4].write(row['입력일자'])
-                    r_cols[5].write(row.get('입자', '-'))
+                    r_cols[5].write(row.get('입력자', '-'))
                     
                     # 3. 승인 버튼 (재고 부족 시 작동 방지)
                     if cur_stock >= req_qty:
