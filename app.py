@@ -165,7 +165,7 @@ elif menu == "🚚 출고 및 처리 관리":
 
 # --- [메뉴 4] 통합 거래 이력 ---
 elif menu == "📋 통합 거래 이력":
-st.title("📋 전체 전표 및 거래 이력 조회")
+    st.title("📋 전체 전표 및 거래 이력 조회")
     if not log_df.empty:
         log_df['sort_date'] = pd.to_datetime(log_df['입력일자'])
         display_log = log_df.sort_values("sort_date", ascending=False).drop(columns=['sort_date'])
