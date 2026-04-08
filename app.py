@@ -55,13 +55,18 @@ if menu == "📊 실시간 재고 현황":
         st.dataframe(
             res, 
             use_container_width=True,
+            column_config={
+                "매입단가": st.column_config.NumberColumn("매입단가", format="%d"),
+                "판매단가": st.column_config.NumberColumn("판매단가", format="%d"),
+                "현재고": st.column_config.NumberColumn("현재고", format="%d"),
+                "재고금액(매입가)": st.column_config.NumberColumn("재고금액(매입가)", format="%d"),
+            })
             formatted_log = display_log.style.format({
                 "매입단가": "{:,}"),
                 "판매단가": "{:,}"),
                 "현재고": "{:,}"),
                 "재고금액(매입가)": "{:,}"),
             })
-        )
     else:
         st.info("마스터 관리 메뉴에서 상품을 먼저 등록해 주세요.")
 
