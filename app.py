@@ -165,12 +165,13 @@ elif menu == "📋 통합 거래 이력":
         # 최신순 정렬
         log_df['sort_date'] = pd.to_datetime(log_df['입력일자'])
         display_log = log_df.sort_values("sort_date", ascending=False).drop(columns=['sort_date'])
-        st.dataframe(display_log, use_container_width=True)
+        st.dataframe(display_log, use_container_width=True
         column_config={
                 "총액": st.column_config.NumberColumn("총액", format="%d"),
                 "수량": st.column_config.NumberColumn("판수량", format="%d"),
                 "단가": st.column_config.NumberColumn("단가", format="%d"),
-             })
+             }
+        )
     else:
         st.info("기록된 거래 이력이 없습니다.")
 
