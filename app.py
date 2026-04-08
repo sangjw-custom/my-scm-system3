@@ -42,45 +42,35 @@ log_df = get_df("log")
 if menu == "📊 실시간 재고 현황":
     st.title("📊 실시간 재고 및 자산 현황")
     if not master_df.empty:
-        # 1. 데이터 병합 및 계산
-        # inventory 데이터가 비어있을 수 있으므로 fillna(0) 처리
+        # 1. 데이터 병합
         res = pd.merge(master_df, inv_df, on="상품코드", how="left").fillna(0)
-        res["재고금액(매입가)"] = res["매입단가"] * res["현재고"]
-        cols = ["매입단가", "판매단가", "현재고", "재고금액(매입가)"]
-        res[cols] = res[cols].apply(pd.to_numeric, errors='coerce').fillna(0)
         
-        # 2. 상단 요약 지표 (Metric) - f-string 포맷 사용
+        # 2. [중요] 숫자형 컬럼 강제 형변환 (이 부분이 핵심입니다)
+        # 데이터가 문자열로 읽혔더라도 강제로 숫자로 바꿔 콤마가 찍히게 합니다.
+        num_cols = ["매입단가", "판매단가", "현재고"]
+        for col in num_cols:
+            res[col] = pd.to_numeric(res[col], errors='coerce').fillna(0)
+            
+        # 3. 재고금액 계산
+        res["재고금액(매입가)"] = res["매입단가"] * res["현재고"]
+        
+        # 4. 상단 요약 지표 (Metric)
         c1, c2 = st.columns(2)
         total_asset = int(res['재고금액(매입가)'].sum())
         c1.metric("총 재고 자산", f"{total_asset:,}원")
         c2.metric("관리 품목 수", f"{len(res):,}개")
         
-        # 3. 데이터프레임 표시 (column_config로 콤마 강제 적용)
+        # 5. 데이터프레임 표시
         st.dataframe(
             res, 
             use_container_width=True,
             column_config={
-                "상품코드": "상품코드",
-                "상품명": "상품명",
-                "단위": "단위",
-                "매입단가": st.column_config.NumberColumn(
-                    "매입단가 (원)",
-                    format="%d"  # %d는 천 단위 콤마가 포함된 정수를 의미합니다
-                ),
-                "판매단가": st.column_config.NumberColumn(
-                    "판매단가 (원)",
-                    format="%d"
-                ),
-                "현재고": st.column_config.NumberColumn(
-                    "현재고",
-                    format="%d"
-                ),
-                "재고금액(매입가)": st.column_config.NumberColumn(
-                    "재고금액(매입가)",
-                    format="%d"
-                )
+                "매입단가": st.column_config.NumberColumn("매입단가", format="%d"),
+                "판매단가": st.column_config.NumberColumn("판매단가", format="%d"),
+                "현재고": st.column_config.NumberColumn("현재고", format="%d"),
+                "재고금액(매입가)": st.column_config.NumberColumn("재고금액(매입가)", format="%d"),
             },
-            hide_index=True # 인덱스 열 숨기기 (선택 사항)
+            hide_index=True
         )
     else:
         st.info("마스터 관리 메뉴에서 상품을 먼저 등록해 주세요.")
