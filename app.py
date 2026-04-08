@@ -106,25 +106,70 @@ elif menu == "🛒 구매 및 입고 관리":
         else:
             st.warning("상품 마스터가 비어 있습니다.")
 
+   입고 확정 처리 화면의 각 행 데이터에도 **천 단위 콤마(,)**가 완벽하게 적용되도록 코드를 보완했습니다.
+
+pending['표시_수량']과 r_cols[2].write 부분을 수정하여 숫자가 문자열로 변환될 때 콤마가 포함되도록 정교하게 다듬었습니다. 아래 코드를 해당 위치에 적용해 주세요.
+
+📥 입고 확정 처리 (수량 콤마 적용 버전)
+Python
     with t2:
+        st.subheader("📥 입고 대기 목록")
         if not log_df.empty:
-            pending = log_df[log_df["유형"] == "구매발주"]
+            # 구매발주 상태인 데이터만 필터링
+            pending = log_df[log_df["유형"] == "구매발주"].copy()
+            
             if not pending.empty:
+                # 1. 표 헤더 설정
+                cols = st.columns([2, 2, 1, 2, 1.5, 1.5])
+                cols[0].write("**문서번호**")
+                cols[1].write("**상품명**")
+                cols[2].write("**수량**")
+                cols[3].write("**발주일자**")
+                cols[4].write("**담당자**")
+                cols[5].write("**액션**")
+                st.divider()
+
+                # 2. 데이터 행 반복 생성
                 for _, row in pending.iterrows():
-                    col_a, col_b = st.columns([4, 1])
-                    col_a.write(f"[{row['문서번호']}] {row['상품명']} / {row['수량']:,}개 (입력자: {row['입력자']})")
-                    if col_b.button("입고승인", key=row['문서번호']):
-                        # 1. 재고 증가
-                        inv_ref = db.collection("inventory").document(row["상품코드"])
-                        inv_doc = inv_ref.get()
-                        cur_stock = inv_doc.to_dict().get("현재고", 0) if inv_doc.exists else 0
-                        inv_ref.set({"상품코드": row["상품코드"], "현재고": cur_stock + row["수량"]})
-                        # 2. 로그 업데이트
-                        db.collection("log").document(row["문서번호"]).update({"유형": "입고", "상태": "입고완료"})
-                        st.success(f"{row['상품명']} 입고 완료!")
+                    r_cols = st.columns([2, 2, 1, 2, 1.5, 1.5])
+                    
+                    # 데이터 추출 및 콤마 포맷팅
+                    doc_no = row['문서번호']
+                    item_name = row['상품명']
+                    # 수량을 정수로 변환 후 콤마 추가
+                    qty_formatted = f"{int(row['수량']):,}"
+                    date_str = row['입력일자']
+                    user_str = row['입력자']
+                    
+                    r_cols[0].write(doc_no)
+                    r_cols[1].write(item_name)
+                    r_cols[2].write(f"**{qty_formatted}**") # 수량 강조
+                    r_cols[3].write(date_str)
+                    r_cols[4].write(user_str)
+                    
+                    # 승인 버튼
+                    if r_cols[5].button("✅ 입고승인", key=f"btn_{doc_no}"):
+                        with st.spinner("처리 중..."):
+                            # A. 재고 업데이트
+                            inv_ref = db.collection("inventory").document(row["상품코드"])
+                            inv_doc = inv_ref.get()
+                            cur_stock = inv_doc.to_dict().get("현재고", 0) if inv_doc.exists else 0
+                            
+                            # 안전하게 숫자로 변환 후 계산
+                            new_stock = int(cur_stock) + int(row["수량"])
+                            inv_ref.set({"상품코드": row["상품코드"], "현재고": new_stock})
+                            
+                            # B. 로그 상태 변경
+                            db.collection("log").document(doc_no).update({
+                                "유형": "입고",
+                                "상태": "입고완료",
+                                "확정일자": datetime.now().strftime("%Y-%m-%d %H:%M")
+                            })
+                            
+                        st.success(f"[{item_name}] {qty_formatted}개 입고 완료!")
                         st.rerun()
             else:
-                st.info("입고 대기 중인 발주 건이 없습니다.")
+                st.info("입고 대기 중인 발주 내역이 없습니다.")
 
 # --- [메뉴 3] 출고 및 처리 관리 ---
 elif menu == "🚚 출고 및 처리 관리":
@@ -151,26 +196,67 @@ elif menu == "🚚 출고 및 처리 관리":
                     st.rerun()
 
     with t2:
+        st.subheader("📤 출고 대기 및 승인")
         if not log_df.empty:
-            reqs = log_df[log_df["유형"] == "출고요청"]
+            # 출고요청 상태인 데이터만 필터링
+            reqs = log_df[log_df["유형"] == "출고요청"].copy()
+            
             if not reqs.empty:
+                # 1. 표 헤더 설정
+                cols = st.columns([2, 2, 1, 1, 2, 1.5])
+                cols[0].write("**문서번호**")
+                cols[1].write("**상품명**")
+                cols[2].write("**요청수량**")
+                cols[3].write("**현재고**")
+                cols[4].write("**요청일자**")
+                cols[5].write("**액션**")
+                st.divider()
+
+                # 2. 데이터 행 반복 생성
                 for _, row in reqs.iterrows():
+                    # 현재 재고 상태 확인
                     inv_ref = db.collection("inventory").document(row["상품코드"])
                     inv_doc = inv_ref.get()
-                    cur_stock = inv_doc.to_dict().get("현재고", 0) if inv_doc.exists else 0
+                    cur_stock = int(inv_doc.to_dict().get("현재고", 0)) if inv_doc.exists else 0
                     
-                    col_a, col_b = st.columns([4, 1])
-                    col_a.write(f"[{row['문서번호']}] {row['상품명']} {row['수량']:,}개 (현재고: {cur_stock})")
-                    if col_b.button("출고승인", key=row['문서번호']):
-                        if cur_stock >= row["수량"]:
-                            inv_ref.update({"현재고": cur_stock - row["수량"]})
-                            db.collection("log").document(row["문서번호"]).update({"유형": "출고", "상태": "출고완료"})
-                            st.success("출고 처리 완료!")
+                    req_qty = int(row["수량"])
+                    
+                    r_cols = st.columns([2, 2, 1, 1, 2, 1.5])
+                    
+                    # 데이터 포맷팅 (콤마 추가)
+                    r_cols[0].write(row['문서번호'])
+                    r_cols[1].write(row['상품명'])
+                    r_cols[2].write(f"**{req_qty:,}**") # 요청수량
+                    
+                    # 재고 부족 시 빨간색 표시
+                    if cur_stock < req_qty:
+                        r_cols[3].write(f":red[{cur_stock:,}]") 
+                    else:
+                        r_cols[3].write(f"{cur_stock:,}")
+                    
+                    r_cols[4].write(row['입력일자'])
+                    
+                    # 3. 승인 버튼 (재고 부족 시 작동 방지)
+                    if cur_stock >= req_qty:
+                        if r_cols[5].button("🚚 출고승인", key=f"out_{row['문서번호']}"):
+                            with st.spinner("처리 중..."):
+                                # A. 재고 차감
+                                inv_ref.update({"현재고": cur_stock - req_qty})
+                                
+                                # B. 로그 상태 업데이트
+                                db.collection("log").document(row["문서번호"]).update({
+                                    "유형": "출고",
+                                    "상태": "출고완료",
+                                    "확정일자": datetime.now().strftime("%Y-%m-%d %H:%M")
+                                })
+                            st.success(f"[{row['상품명']}] {req_qty:,}개 출고 완료!")
                             st.rerun()
-                        else:
-                            st.error("재고가 부족하여 출고할 수 없습니다.")
+                    else:
+                        r_cols[5].button("⚠️ 재고부족", key=f"out_{row['문서번호']}", disabled=True)
             else:
                 st.info("대기 중인 출고 요청이 없습니다.")
+        else:
+            st.info("거래 기록이 존재하지 않습니다.")
 
 # --- [메뉴 4] 통합 거래 이력 ---
 elif menu == "📋 통합 거래 이력":
