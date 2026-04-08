@@ -52,10 +52,10 @@ if menu == "📊 실시간 재고 현황":
         
         st.dataframe(res, use_container_width=True,
                     column_config={
-                "매입단가": st.column_config.NumberColumn("매입단가", format="%d"),
-                "판매단가": st.column_config.NumberColumn("판매단가", format="%d"),
-                "현재고": st.column_config.NumberColumn("현재고", format="%d"),
-                "재고금액(매입가)": st.column_config.NumberColumn("재고금액(매입가)", format="%d"),
+                "매입단가": st.column_config.NumberColumn("매입단가", format="#,###"),
+                "판매단가": st.column_config.NumberColumn("판매단가", format="#,###"),
+                "현재고": st.column_config.NumberColumn("현재고", format="#,###"),
+                "재고금액(매입가)": st.column_config.NumberColumn("재고금액(매입가)", format="#,###"),
             })
     else:
         st.info("마스터 관리 메뉴에서 상품을 먼저 등록해 주세요.")
@@ -167,9 +167,9 @@ elif menu == "📋 통합 거래 이력":
         display_log = log_df.sort_values("sort_date", ascending=False).drop(columns=['sort_date'])
         st.dataframe(display_log, use_container_width=True,
         column_config={
-                "총액": st.column_config.NumberColumn("총액", format="%d"),
-                "수량": st.column_config.NumberColumn("판수량", format="%d"),
-                "단가": st.column_config.NumberColumn("단가", format="%d"),
+                "총액": st.column_config.NumberColumn("총액", format="#,###"),
+                "수량": st.column_config.NumberColumn("판수량", format="#,###"),
+                "단가": st.column_config.NumberColumn("단가", format="#,###"),
              }
         )
     else:
