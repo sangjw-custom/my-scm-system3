@@ -262,7 +262,7 @@ elif menu == "🚚 출고 및 처리 관리":
                                 db.collection("log").document(row["문서번호"]).update({
                                     "유형": "출고",
                                     "상태": "출고완료",
-                                    "확정일자": datetime.now().strftime("%Y-%m-%d %H:%M")
+                                    "확정일자": get_now_kst()
                                 })
                             st.success(f"[{row['상품명']}] {req_qty:,}개 출고 완료!")
                             st.rerun()
