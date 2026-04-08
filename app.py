@@ -176,18 +176,34 @@ elif menu == "🚚 출고 및 처리 관리":
                 item_name = st.selectbox("출고 품목", master_df["상품명"])
                 qty = st.number_input("요청 수량", min_value=1, step=1)
                 user = st.text_input("요청자")
+                
                 if st.form_submit_button("출고 요청"):
-                    item_info = master_df[master_df["상품명"] == item_name].iloc[0]
-                    doc_no = generate_doc_no("REQ")
-                    data = {
-                        "문서번호": doc_no, "입력일자": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                        "유형": "출고요청", "상품코드": item_info["상품코드"], "상품명": item_name,
-                        "수량": qty, "단가": item_info["판매단가"], "총액": qty * item_info["판매단가"],
-                        "입력자": user, "상태": "대기"
-                    }
-                    db.collection("log").document(doc_no).set(data)
-                    st.success(f"출고 요청 완료: {doc_no}")
-                    st.rerun()
+                    # 1. 마스터 정보 찾기
+                    selected_items = master_df[master_df["상품명"] == item_name]
+                    if not selected_items.empty:
+                        item_info = selected_items.iloc[0]
+                        doc_no = generate_doc_no("REQ")
+                        
+                        # 2. [핵심] Firestore 전송용 데이터 구성 (강제 형변환)
+                        data = {
+                            "문서번호": str(doc_no),
+                            "입력일자": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                            "유형": "출고요청",
+                            "상품코드": str(item_info["상품코드"]),
+                            "상품명": str(item_name),
+                            "수량": int(qty),
+                            "단가": int(item_info["판매단가"]),
+                            "총액": int(qty * item_info["판매단가"]),
+                            "입력자": str(user),
+                            "상태": "대기"
+                        }
+                        
+                        # 3. 데이터 저장
+                        db.collection("log").document(doc_no).set(data)
+                        st.success(f"출고 요청 완료: {doc_no}")
+                        st.rerun()
+                    else:
+                        st.error("상품 정보를 찾을 수 없습니다.")
 
     with t2:
         st.subheader("📤 출고 대기 및 승인")
