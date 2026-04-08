@@ -69,11 +69,17 @@ elif menu == "🛒 구매 및 입고 관리":
                     item_info = master_df[master_df["상품명"] == item_name].iloc[0]
                     doc_no = generate_doc_no("PO")
                     data = {
-                        "문서번호": doc_no, "입력일자": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                        "유형": "구매발주", "상품코드": item_info["상품코드"], "상품명": item_name,
-                        "수량": qty, "단가": item_info["매입단가"], "총액": qty * item_info["매입단가"],
-                        "입력자": user, "상태": "발주완료"
-                    }
+                            "문서번호": str(doc_no),
+                            "입력일자": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                            "유형": "구매발주",
+                            "상품코드": str(item_info["상품코드"]),
+                            "상품명": str(item_name),
+                            "수량": int(qty),
+                            "단가": int(item_info["매입단가"]),
+                            "총액": int(qty * item_info["매입단가"]),
+                            "입력자": str(user),
+                            "상태": "발주완료"
+                        }
                     db.collection("log").document(doc_no).set(data)
                     st.success(f"발주 완료: {doc_no}")
                     st.rerun()
