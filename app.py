@@ -192,12 +192,23 @@ elif menu == "🚚 출고 및 처리 관리":
 elif menu == "📋 통합 거래 이력":
     st.title("📋 전체 전표 및 거래 이력 조회")
     if not log_df.empty:
-        # 열 순서 (프로젝트 정보 전면 배치)
-        ordered_cols = ["유형" "상태" "프로젝트코드", "프로젝트명", "상품유형", "상품코드", "상품명", "단위", "수량", "단가", "총액", "문서번호", "입력일자", "입력자", "확정일자"]
-        
         log_df['sort_date'] = pd.to_datetime(log_df['입력일자'])
         display_log = log_df.sort_values("sort_date", ascending=False).drop(columns=['sort_date'])
+        
+       # 마스터 데이터와 병합하여 '단위' 정보 가져오기 (선택 사항)
+        if not master_df.empty:
+            display_log = pd.merge(log_df, master_df[['상품코드', '단위']], on="상품코드", how="left")
+        else:
+            display_log = log_df.copy()
+            display_log['단위'] = "-"
 
+        # 요청하신 순서대로 열 재배열
+        # 데이터에 해당 컬럼이 없을 경우를 대비해 reindex 사용
+        history_cols = [
+            "유형", "상태", "프로젝트명", 
+            "상품명", "수량", "단위", "단가", 
+            "총액", "입력자", "문서번호", "입력일자", "확정일자", 
+        ]
        
         # 숫자 컬럼들에 대해 콤마 포맷 적용
         formatted_log = display_log.style.format({
