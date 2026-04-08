@@ -336,9 +336,9 @@ elif menu == "⚙️ 상품 마스터 관리":
             code = c1.text_input("상품코드 (중복불가)")
             name = c2.text_input("상품명")
             # 1. 상품유형 추가 (원하는 카테고리로 수정 가능)
-            p_type = c3.selectbox("상품유형", ["완제품", "반제품", "원자재", "부자재", "소모품"])
+            p_type = c3.selectbox("상품유형", ["타일", "인조대리석", "빅슬랩"])
             
-            unit = c1.selectbox("단위", ["EA", "m", "kg", "box", "set"])
+            unit = c1.selectbox("단위", ["EA", "m", "kg", "box", "set", "m2", "MAE"])
             in_price = c2.number_input("매입단가", min_value=0, step=100)
             out_price = c3.number_input("판매단가", min_value=0, step=100)
             
